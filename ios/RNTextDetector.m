@@ -22,7 +22,7 @@ static NSString *const detectionNoResultsMessage = @"Something went wrong";
 NSMutableArray* prepareOutput(FIRVisionText *result) {
     NSMutableArray *output = [NSMutableArray array];
     for (FIRVisionTextBlock *block in result.blocks) {
-        
+
         NSMutableArray *blockElements = [NSMutableArray array];
         for (FIRVisionTextLine *line in block.lines) {
             NSMutableArray *lineElements = [NSMutableArray array];
@@ -39,7 +39,7 @@ NSMutableArray* prepareOutput(FIRVisionText *result) {
                                    };
                 [lineElements addObject:e];
             }
-            
+
             NSMutableDictionary *l = [NSMutableDictionary dictionary];
             l[@"text"] = line.text;
             l[@"cornerPoints"] = line.cornerPoints;
@@ -53,7 +53,7 @@ NSMutableArray* prepareOutput(FIRVisionText *result) {
                                };
             [blockElements addObject:l];
         }
-        
+
         NSMutableDictionary *b = [NSMutableDictionary dictionary];
         b[@"text"] = block.text;
         b[@"cornerPoints"] = block.cornerPoints;
@@ -76,11 +76,11 @@ RCT_REMAP_METHOD(detectFromUri, detectFromUri:(NSString *)imagePath resolver:(RC
         resolve(@NO);
         return;
     }
-    
+
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imagePath]];
         UIImage *image = [UIImage imageWithData:imageData];
-        
+
         if (!image) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 RCTLog(@"No image found %@", imagePath);
@@ -90,9 +90,14 @@ RCT_REMAP_METHOD(detectFromUri, detectFromUri:(NSString *)imagePath resolver:(RC
         }
         
         FIRVision *vision = [FIRVision vision];
-        FIRVisionTextRecognizer *textRecognizer = [vision onDeviceTextRecognizer];
+
+        FIRVisionCloudTextRecognizerOptions *options =
+                [[FIRVisionCloudTextRecognizerOptions alloc] init];
+        options.languageHints = @[@"en"];
+
+        FIRVisionTextRecognizer *textRecognizer = [vision cloudTextRecognizerWithOptions:options];
         FIRVisionImage *handler = [[FIRVisionImage alloc] initWithImage:image];
-        
+
         [textRecognizer processImage:handler completion:^(FIRVisionText *_Nullable result, NSError *_Nullable error) {
             @try {
                 if (error != nil || result == nil) {
@@ -114,11 +119,11 @@ RCT_REMAP_METHOD(detectFromUri, detectFromUri:(NSString *)imagePath resolver:(RC
                     resolve(pData);
                 });
             }
-            
+
         }];
-        
+
     });
-    
+
 }
 
 RCT_REMAP_METHOD(detectFromFile, detectFromFile:(NSString *)imagePath resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
@@ -126,22 +131,22 @@ RCT_REMAP_METHOD(detectFromFile, detectFromFile:(NSString *)imagePath resolver:(
         resolve(@NO);
         return;
     }
-    
+
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSData *imageData = [NSData dataWithContentsOfFile:imagePath];
         UIImage *image = [UIImage imageWithData:imageData];
-        
+
         if (!image) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 resolve(@NO);
             });
             return;
         }
-        
+
         FIRVision *vision = [FIRVision vision];
         FIRVisionTextRecognizer *textRecognizer = [vision onDeviceTextRecognizer];
         FIRVisionImage *handler = [[FIRVisionImage alloc] initWithImage:image];
-        
+
         [textRecognizer processImage:handler completion:^(FIRVisionText *_Nullable result, NSError *_Nullable error) {
             @try {
                 if (error != nil || result == nil) {
@@ -149,7 +154,7 @@ RCT_REMAP_METHOD(detectFromFile, detectFromFile:(NSString *)imagePath resolver:(
                     @throw [NSException exceptionWithName:@"failure" reason:errorString userInfo:nil];
                     return;
                 }
-            
+
                 NSMutableArray *output = prepareOutput(result);
                 dispatch_async(dispatch_get_main_queue(), ^{
                     resolve(output);
@@ -164,10 +169,10 @@ RCT_REMAP_METHOD(detectFromFile, detectFromFile:(NSString *)imagePath resolver:(
                     resolve(pData);
                 });
             }
-            
+
         }];
     });
-    
+
 }
 
 
